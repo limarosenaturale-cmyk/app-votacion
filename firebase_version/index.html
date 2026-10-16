@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yo Soy - Votación VIP (Versión Firebase)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    
+    <!-- SDK Firebase v10 Modular -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        // =========================================================================
+        // ⚙️ PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE (Realtime Database)
+        // Puedes crear tu proyecto gratis en https://console.firebase.google.com
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "PEGA_AQUI_TU_API_KEY",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            databaseURL: "https://tu-proyecto-default-rtdb.firebaseio.com",
+            projectId: "tu-proyecto",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+
+        // Identificador persistente
+        let deviceId = localStorage.getItem('fb_vote_device_id');
+        if (!deviceId) {
+            deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+            localStorage.setItem('fb_vote_device_id', deviceId);
+        }
+
+        let db = null;
+        let isFirebaseConfigured = !firebaseConfig.apiKey.includes("PEGA_AQUI");
+        let participantsData = [];
+        let myVotes = JSON.parse(localStorage.getItem('fb_my_votes') || '{}');
+        let isAdmin = false;
+        let isResultsRevealed = false;
+        let isVotingOpen = true;
+
+        if (isFirebaseConfigured) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                initFirebaseListeners();
+            } catch (e) {
+                console.error("Error iniciando Firebase:", e);
+            }
+        }
+
+        function initFirebaseListeners() {
+            // Escuchar participantes
+            const partsRef = ref(db, 'participantes');
+            onValue(partsRef, (snapshot) => {
+                const val = snapshot.val();
+                participantsData = [];
+                if (val) {
+                    Object.keys(val).forEach(k => {
+                        participantsData.push({ id: k, ...val[k] });
+                    });
+                }
+                renderParticipants();
+                renderRanking();
+                if (isAdmin) renderAdminList();
+            });
+
+            // Escuchar configuración global
+            const configRef = ref(db, 'config');
+            onValue(configRef, (snapshot) => {
+                const cfg = snapshot.val() || {};
+                isResultsRevealed = cfg.mostrar_resultados || false;
+                isVotingOpen = cfg.votaciones_abiertas !== false;
+                renderRanking();
+                renderParticipants();
+            });
+        }
+
+        window.login = function() {
+            const input = document.getElementById('username-input').value.trim();
+            if (!input) return alert("Ingresa tu nombre");
+
+            if (input.toUpperCase() === "ADMIN2026") {
+                isAdmin = true;
+                document.getElementById('nav-admin').classList.remove('hidden');
+                document.getElementById('nav-admin').classList.add('flex');
+            }
+
+            document.getElementById('display-username').innerText = isAdmin ? "Control Maestro" : input;
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('screen-app').classList.remove('hidden');
+            renderParticipants();
+            renderRanking();
+        }
+
+        window.castVote = async function(partId, stars) {
+            if (myVotes[partId]) return alert("Ya votaste por este participante");
+            if (!isVotingOpen) return alert("Votación pausada temporalmente");
+
+            myVotes[partId] = stars;
+            localStorage.setItem('fb_my_votes', JSON.stringify(myVotes));
+            renderParticipants();
+
+            if (db) {
+                const partRef = ref(db, `participantes/${partId}`);
+                const snap = await get(partRef);
+                if (snap.exists()) {
+                    const data = snap.val();
+                    await update(partRef, {
+                        total_puntos: (data.total_puntos || 0) + stars,
+                        total_votos: (data.total_votos || 0) + 1
+                    });
+                }
+                // Guardar log del voto
+                push(ref(db, 'votos'), {
+                    participante_id: partId,
+                    puntos: stars,
+                    dispositivo: deviceId,
+                    fecha: new Date().toISOString()
+                });
+            }
+
+            confetti({ particleCount: 40, spread: 60 });
+        }
+
+        window.adminAddParticipant = async function() {
+            if (!isAdmin) return;
+            const name = document.getElementById('admin-part-name').value.trim();
+            const artist = document.getElementById('admin-part-artist').value.trim();
+            if (!name || !artist) return alert("Completa los datos");
+
+            if (db) {
+                const newRef = push(ref(db, 'participantes'));
+                await set(newRef, {
+                    nombre_participante: name,
+                    personaje_imita: artist,
+                    total_puntos: 0,
+                    total_votos: 0
+                });
+            } else {
+                participantsData.push({ id: Date.now().toString(), nombre_participante: name, personaje_imita: artist, total_puntos: 0, total_votos: 0 });
+                renderParticipants();
+                renderAdminList();
+            }
+
+            document.getElementById('admin-part-name').value = '';
+            document.getElementById('admin-part-artist').value = '';
+        }
+
+        window.adminToggleReveal = async function() {
+            if (!isAdmin || !db) return;
+            isResultsRevealed = !isResultsRevealed;
+            await update(ref(db, 'config'), { mostrar_resultados: isResultsRevealed });
+        }
+
+        window.renderParticipants = function() {
+            const container = document.getElementById('participants-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            participantsData.forEach((p, idx) => {
+                const hasVoted = myVotes[p.id] !== undefined;
+                const score = myVotes[p.id] || 0;
+                let starsHTML = '';
+                for (let i = 1; i <= 5; i++) {
+                    const active = i <= score ? 'text-yellow-400' : 'text-gray-600';
+                    const act = hasVoted ? '' : `onclick="castVote('${p.id}', ${i})"`;
+                    starsHTML += `<button ${act} class="p-1.5 text-3xl ${active}"><i class="fa-solid fa-star"></i></button>`;
+                }
+                container.innerHTML += `
+                    <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl relative">
+                        ${hasVoted ? `<span class="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-black px-3 py-1 rounded-bl-xl">VOTASTE ${score}⭐</span>` : ''}
+                        <h4 class="text-xl font-black text-white">${p.nombre_participante}</h4>
+                        <p class="text-xs text-yellow-400 font-bold mb-3">${p.personaje_imita}</p>
+                        <div class="bg-black/60 p-2 rounded-xl flex justify-center gap-1">${starsHTML}</div>
+                    </div>
+                `;
+            });
+        }
+
+        window.renderRanking = function() {
+            const vault = document.getElementById('results-vault');
+            const ranking = document.getElementById('results-ranking');
+            if (isResultsRevealed || isAdmin) {
+                vault.classList.add('hidden');
+                ranking.classList.remove('hidden');
+                ranking.innerHTML = '';
+                const sorted = [...participantsData].sort((a,b) => (b.total_puntos || 0) - (a.total_puntos || 0));
+                sorted.forEach((p, idx) => {
+                    ranking.innerHTML += `
+                        <div class="flex justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-800">
+                            <div><span class="text-yellow-400 font-bold mr-2">${idx + 1}º</span><strong class="text-white">${p.nombre_participante}</strong> <span class="text-gray-400 text-xs">(${p.personaje_imita})</span></div>
+                            <span class="text-yellow-400 font-black">${p.total_puntos || 0} pts</span>
+                        </div>
+                    `;
+                });
+            } else {
+                vault.classList.remove('hidden');
+                ranking.classList.add('hidden');
+            }
+        }
+
+        window.renderAdminList = function() {
+            const list = document.getElementById('admin-list');
+            if (!list) return;
+            list.innerHTML = '';
+            participantsData.forEach(p => {
+                list.innerHTML += `<div class="flex justify-between bg-black p-2.5 rounded-lg text-xs border border-gray-800"><span class="text-white font-bold">${p.nombre_participante} (${p.personaje_imita})</span><span class="text-yellow-400">${p.total_puntos||0} pts</span></div>`;
+            });
+        }
+
+        window.switchTab = function(tab) {
+            ['votar','resultados','admin'].forEach(t => {
+                const el = document.getElementById('tab-' + t);
+                if (el) el.classList.add('hidden');
+            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+        }
+    </script>
+</head>
+<body class="bg-black text-white font-['Poppins'] min-h-screen flex flex-col">
+    <!-- PANTALLA LOGIN -->
+    <div id="screen-login" class="flex-1 flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-800 p-8 rounded-3xl w-full max-w-sm text-center">
+            <h1 class="text-3xl font-black text-yellow-400 mb-2">YO SOY VIP</h1>
+            <p class="text-gray-400 text-xs mb-6">Versión Firebase Realtime Database</p>
+            <input type="text" id="username-input" placeholder="Tu Nombre o Apodo" class="w-full bg-black border border-gray-700 p-3 rounded-xl mb-4 text-center text-white outline-none focus:border-yellow-400">
+            <button onclick="login()" class="w-full bg-yellow-500 text-black font-black py-3 rounded-xl hover:bg-yellow-400 transition">ENTRAR A VOTAR</button>
+            <p class="text-[11px] text-gray-500 mt-4">Clave admin: ADMIN2026</p>
+        </div>
+    </div>
+
+    <!-- PANTALLA APP -->
+    <div id="screen-app" class="hidden flex-1 flex flex-col p-4 max-w-md mx-auto w-full pb-24">
+        <header class="flex justify-between items-center py-4 border-b border-gray-800 mb-4">
+            <div>
+                <span class="text-[10px] text-red-500 font-bold animate-pulse">● EN VIVO</span>
+                <h3 id="display-username" class="text-lg font-bold">Invitado</h3>
+            </div>
+            <span class="bg-yellow-500 text-black text-xs font-black px-3 py-1 rounded-full">JURADO VIP</span>
+        </header>
+
+        <main class="flex-1 overflow-y-auto">
+            <!-- TAB VOTAR -->
+            <div id="tab-votar" class="space-y-4">
+                <div id="participants-list" class="space-y-3"></div>
+            </div>
+
+            <!-- TAB RESULTADOS -->
+            <div id="tab-resultados" class="hidden space-y-4">
+                <div id="results-vault" class="text-center py-12 bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <i class="fa-solid fa-lock text-4xl text-yellow-400 mb-3"></i>
+                    <h4 class="font-bold text-lg">RESULTADOS OCULTOS</h4>
+                    <p class="text-xs text-gray-400 mt-1">El anfitrión revelará al ganador al final del show.</p>
+                </div>
+                <div id="results-ranking" class="hidden space-y-2"></div>
+            </div>
+
+            <!-- TAB ADMIN -->
+            <div id="tab-admin" class="hidden space-y-4">
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl space-y-3">
+                    <h4 class="font-bold text-sm text-yellow-400">Nuevo Participante</h4>
+                    <input type="text" id="admin-part-name" placeholder="Nombre" class="w-full bg-black border border-gray-700 p-2 text-sm rounded-lg text-white">
+                    <input type="text" id="admin-part-artist" placeholder="Artista que imita" class="w-full bg-black border border-gray-700 p-2 text-sm rounded-lg text-white">
+                    <button onclick="adminAddParticipant()" class="w-full bg-yellow-500 text-black font-bold py-2 rounded-lg text-sm">AGREGAR</button>
+                </div>
+                <button onclick="adminToggleReveal()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl text-sm">REVELAR / OCULTAR RESULTADOS</button>
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                    <h4 class="font-bold text-sm mb-2">Concursantes en Vivo:</h4>
+                    <div id="admin-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </main>
+
+        <nav class="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 py-3 flex justify-around">
+            <button onclick="switchTab('votar')" class="text-yellow-400 text-xs font-bold flex flex-col items-center"><i class="fa-solid fa-star text-lg mb-1"></i>VOTAR</button>
+            <button onclick="switchTab('resultados')" class="text-gray-400 text-xs font-bold flex flex-col items-center"><i class="fa-solid fa-trophy text-lg mb-1"></i>RESULTADOS</button>
+            <button id="nav-admin" onclick="switchTab('admin')" class="hidden text-red-500 text-xs font-bold flex flex-col items-center"><i class="fa-solid fa-shield-halved text-lg mb-1"></i>ADMIN</button>
+        </nav>
+    </div>
+</body>
+</html>

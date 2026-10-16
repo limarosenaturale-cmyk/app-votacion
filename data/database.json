@@ -1,0 +1,40 @@
+{
+  "config": {
+    "titulo": "Yo Soy - Edición Cumpleaños Liz & Criss",
+    "subtitulo": "Votación VIP en Vivo",
+    "mostrar_resultados": false,
+    "votaciones_abiertas": true,
+    "admin_pin": "ADMIN2026"
+  },
+  "participantes": [
+    {
+      "id": "1",
+      "nombre_participante": "Liz",
+      "personaje_imita": "Rihanna",
+      "total_puntos": 0,
+      "total_votos": 0
+    },
+    {
+      "id": "2",
+      "nombre_participante": "Cristina",
+      "personaje_imita": "Shakira",
+      "total_puntos": 0,
+      "total_votos": 0
+    },
+    {
+      "id": "1792192890729",
+      "nombre_participante": "Pedro",
+      "personaje_imita": "Luis Miguel",
+      "total_puntos": 0,
+      "total_votos": 0
+    },
+    {
+      "id": "1792194242710",
+      "nombre_participante": "tu",
+      "personaje_imita": "vfv",
+      "total_puntos": 0,
+      "total_votos": 0
+    }
+  ],
+  "votos": []
+}

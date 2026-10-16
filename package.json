@@ -1,0 +1,23 @@
+{
+  "name": "app-votacion-vip",
+  "version": "1.0.0",
+  "description": "App de votaciones en tiempo real para eventos y concursos de imitación",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "voting",
+    "realtime",
+    "eventos",
+    "votacion-vip"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  }
+}

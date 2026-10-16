@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yo Soy - Votación VIP</title>
+    
+    <!-- Librerías de diseño y efectos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { poppins: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        gold: { 300: '#FDE047', 400: '#FACC15', 500: '#EAB308', 600: '#CA8A04', 700: '#A16207' },
+                        dark: '#0a0a0a',
+                        card: '#141414'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #0a0a0a; 
+            color: white; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none;
+        }
+        .bg-glass { 
+            background: rgba(18, 18, 18, 0.90); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+        }
+        .text-gold-gradient { 
+            background: linear-gradient(135deg, #FFF099 0%, #EAB308 50%, #92400E 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+        .gold-border-glow {
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.25);
+            border-color: rgba(234, 179, 8, 0.5);
+        }
+        .fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(8px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        .star-btn { transition: all 0.15s ease-in-out; }
+        .star-btn:active:not(:disabled) { transform: scale(1.3); }
+        .star-btn.active { color: #EAB308; text-shadow: 0 0 12px rgba(234, 179, 8, 0.7); }
+        
+        #toast { transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(120%); opacity: 0; }
+        #toast.show { transform: translateY(0); opacity: 1; }
+
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed">
+
+    <!-- PANTALLA DE CARGA -->
+    <div id="screen-loading" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="relative">
+            <i class="fa-solid fa-microphone-lines text-6xl text-gold-500 animate-pulse mb-6"></i>
+            <div class="absolute inset-0 blur-xl bg-gold-500/20 rounded-full"></div>
+        </div>
+        <h2 class="text-2xl font-black text-white tracking-widest">CONECTANDO...</h2>
+        <p class="text-gray-500 mt-2 text-xs tracking-wider">Sincronizando escenario en vivo</p>
+    </div>
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="screen-login" class="hidden absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-6 fade-in">
+        <div class="w-full max-w-sm bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-gold-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="inline-block p-3 rounded-2xl bg-gold-500/10 border border-gold-500/20 mb-4">
+                <i class="fa-solid fa-crown text-3xl text-gold-500"></i>
+            </div>
+            
+            <h1 class="text-4xl font-black text-gold-gradient tracking-tight mb-1">YO SOY</h1>
+            <p id="event-subtitle" class="text-gray-400 text-xs font-medium uppercase tracking-widest mb-8">Edición Cumpleaños Liz & Criss</p>
+            
+            <form onsubmit="event.preventDefault(); doLogin();" class="space-y-4">
+                <div class="relative">
+                    <input type="text" id="username-input" placeholder="Tu Nombre o Apodo" autofocus
+                           class="w-full bg-black/80 border border-gray-700 rounded-2xl px-5 py-4 text-center text-white placeholder-gray-500 focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition font-semibold text-lg">
+                </div>
+                
+                <button type="submit" class="w-full bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-black font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.35)] transition-all active:scale-95 text-base tracking-wide flex items-center justify-center gap-2">
+                    <span>ENTRAR AL SHOW</span>
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-gray-800/80 flex items-center justify-center gap-4 text-xs text-gray-500">
+                <span><i class="fa-solid fa-mobile-screen-button mr-1 text-gold-500"></i> 1 voto por artista</span>
+                <span>•</span>
+                <button type="button" onclick="promptAdminLogin()" class="text-gray-500 hover:text-gold-400 transition">
+                    <i class="fa-solid fa-shield-halved mr-1"></i> Admin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL -->
+    <div id="screen-app" class="hidden h-full w-full flex flex-col fade-in relative">
+        
+        <!-- Header -->
+        <header class="pt-10 pb-3 px-6 bg-gradient-to-b from-black via-black/80 to-transparent flex justify-between items-center z-10 shrink-0 border-b border-white/5">
+            <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                    <span id="live-indicator" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span id="live-text" class="text-[10px] font-extrabold text-red-500 tracking-widest">EN VIVO</span>
+                    <span id="voting-status-badge" class="hidden ml-1 text-[9px] bg-red-950/80 text-red-400 border border-red-800/60 px-2 py-0.5 rounded-full font-bold">PAUSADO</span>
+                </div>
+                <h2 id="display-username" class="text-lg font-black text-white leading-tight truncate max-w-[190px]">Invitado</h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <div id="badge-jurado" class="bg-gradient-to-r from-gold-500 to-gold-600 text-black text-[11px] font-black px-3.5 py-1.5 rounded-full shadow-[0_0_12px_rgba(234,179,8,0.3)] flex items-center gap-1.5">
+                    <i class="fa-solid fa-star text-[10px]"></i>
+                    <span>JURADO VIP</span>
+                </div>
+                <button onclick="logout()" title="Cambiar usuario" class="p-2 text-gray-500 hover:text-white transition rounded-full hover:bg-white/10">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Contenedor scrolleable principal -->
+        <main class="flex-1 overflow-y-auto px-4 pt-4 pb-28 z-0">
+            
+            <!-- VISTA: VOTAR -->
+            <div id="tab-votar" class="fade-in space-y-4">
+                <div class="bg-gray-900/60 border border-gray-800/80 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-black text-white">Votación Activa</h3>
+                        <p class="text-gray-400 text-xs">Califica con estrellas (1 a 5). ¡Voto único e irreversible!</p>
+                    </div>
+                    <span class="text-xs bg-gold-500/10 text-gold-400 border border-gold-500/20 px-2.5 py-1 rounded-lg font-bold" id="voted-counter-badge">
+                        0 Votados
+                    </span>
+                </div>
+                
+                <div id="participants-list" class="space-y-4">
+                    <div class="text-center py-16 text-gray-500">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl text-gold-500 mb-3"></i>
+                        <p class="text-sm">Cargando participantes...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: RESULTADOS -->
+            <div id="tab-resultados" class="hidden fade-in min-h-[70vh] flex flex-col">
+                <div class="mb-4 text-center">
+                    <h3 class="text-2xl font-black text-white">Tabla de Posiciones</h3>
+                    <p class="text-gray-400 text-xs">El veredicto final del jurado</p>
+                </div>
+
+                <!-- Bóveda Secreta (Mostrado si no se han revelado) -->
+                <div id="results-vault" class="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-gray-900/80 to-black/80 border border-gray-800 rounded-3xl p-8 text-center my-auto shadow-2xl relative overflow-hidden">
+                    <div class="w-20 h-20 bg-gold-500/10 border border-gold-500/20 rounded-full flex items-center justify-center mb-6 relative">
+                        <i class="fa-solid fa-lock text-3xl text-gold-500 animate-bounce"></i>
+                        <div class="absolute inset-0 rounded-full bg-gold-500/20 blur-md"></div>
+                    </div>
+                    <h4 class="text-xl font-black text-white tracking-wide mb-2">BÓVEDA BAJO LLAVE</h4>
+                    <p class="text-gray-400 text-xs leading-relaxed max-w-xs mb-6">
+                        Los votos se están sumando en tiempo real en secreto. ¡El ganador absoluto será revelado en vivo por el anfitrión!
+                    </p>
+                    <div class="w-32 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div class="w-full h-full bg-gradient-to-r from-gold-500 to-amber-600 animate-pulse"></div>
+                    </div>
+                </div>
+
+                <!-- Ranking Real (Mostrado si ya se revelaron) -->
+                <div id="results-ranking" class="hidden space-y-3 pb-6">
+                    <!-- Ranking inyectado por JS -->
+                </div>
+            </div>
+
+            <!-- VISTA: ADMIN (Solo con clave ADMIN2026) -->
+            <div id="tab-admin" class="hidden fade-in space-y-5 pb-6">
+                <!-- Banner Admin -->
+                <div class="bg-gradient-to-r from-red-950/60 to-red-900/30 border border-red-500/40 p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-black text-red-400 flex items-center gap-2">
+                            <i class="fa-solid fa-user-shield"></i> Control Maestro
+                        </h3>
+                        <p class="text-gray-400 text-xs">Monitoreo en vivo y administración del concurso</p>
+                    </div>
+                    <button onclick="openQrModal()" class="bg-black/60 hover:bg-black border border-white/10 text-white text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition">
+                        <i class="fa-solid fa-qrcode text-gold-500"></i> Código QR
+                    </button>
+                </div>
+
+                <!-- Botones de Acción Global -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-reveal" onclick="adminToggleReveal()" class="bg-red-600 hover:bg-red-500 text-white font-black py-3.5 px-3 rounded-2xl shadow-lg transition active:scale-95 text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-unlock-keyhole"></i>
+                        <span id="btn-reveal-text">REVELAR RESULTADOS</span>
+                    </button>
+                    <button id="btn-toggle-voting" onclick="adminToggleVoting()" class="bg-gray-800 hover:bg-gray-700 text-white font-black py-3.5 px-3 rounded-2xl border border-gray-700 transition active:scale-95 text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-pause"></i>
+                        <span id="btn-toggle-voting-text">PAUSAR VOTACIÓN</span>
+                    </button>
+                </div>
+
+                <!-- Formulario Agregar Participante -->
+                <div class="bg-card border border-gray-800 p-5 rounded-2xl shadow-xl">
+                    <h4 class="font-black text-white text-sm mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-gold-500"></i> Agregar Nuevo Participante
+                    </h4>
+                    <form onsubmit="event.preventDefault(); adminAddParticipant();" class="space-y-3">
+                        <input type="text" id="admin-part-name" placeholder="Nombre (Ej. Juan Pérez)" 
+                               class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-gold-500 transition">
+                        <input type="text" id="admin-part-artist" placeholder="Personaje / Artista (Ej. Luis Miguel)" 
+                               class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-gold-500 transition">
+                        <button type="submit" class="w-full bg-gold-500 hover:bg-gold-400 text-black font-black py-3 rounded-xl active:scale-95 transition shadow-[0_0_15px_rgba(234,179,8,0.25)] text-xs tracking-wider flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-microphone"></i> SUBIR AL ESCENARIO
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Resumen de Votaciones en Vivo (Admin) -->
+                <div class="bg-card border border-gray-800 p-5 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-black text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-chart-simple text-gold-500"></i> Conteo en Tiempo Real
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <span id="admin-total-votos" class="text-xs bg-gray-800 text-gold-400 px-2 py-0.5 rounded-md font-bold">0 Votos</span>
+                            <button onclick="adminResetVotes()" title="Reiniciar votos a 0" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 bg-red-950/40 rounded-lg border border-red-900/50">
+                                <i class="fa-solid fa-rotate-right mr-1"></i> Reiniciar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="admin-ranking-live" class="space-y-3">
+                        <!-- Podio en vivo admin -->
+                    </div>
+                </div>
+
+                <!-- Lista de Participantes (Editar / Eliminar) -->
+                <div class="bg-card border border-gray-800 p-5 rounded-2xl">
+                    <h4 class="font-black text-white text-sm mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-users text-gold-500"></i> Lista de Concursantes (<span id="admin-part-count">0</span>)
+                    </h4>
+                    <div id="admin-list" class="space-y-2.5">
+                        <!-- Lista admin inyectada por JS -->
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Navbar Inferior -->
+        <nav class="bg-glass absolute bottom-0 w-full px-6 py-3 flex justify-around items-center z-20 pb-7 border-t border-white/5">
+            <button onclick="switchTab('votar')" id="nav-votar" class="flex flex-col items-center gap-1 text-gold-500 transition-colors w-1/3">
+                <i class="fa-solid fa-star text-xl"></i>
+                <span class="text-[10px] font-bold tracking-wider">VOTAR</span>
+            </button>
+            <button onclick="switchTab('resultados')" id="nav-resultados" class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors w-1/3">
+                <i class="fa-solid fa-trophy text-xl"></i>
+                <span class="text-[10px] font-bold tracking-wider">RESULTADOS</span>
+            </button>
+            <button onclick="switchTab('admin')" id="nav-admin" class="hidden flex-col items-center gap-1 text-red-500 transition-colors w-1/3">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+                <span class="text-[10px] font-bold tracking-wider">PANEL VIP</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Modal Código QR -->
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 fade-in">
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-3xl max-w-sm w-full text-center relative shadow-2xl">
+            <button onclick="closeQrModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-xl font-black text-white mb-1">¡Escanea y Vota!</h3>
+            <p class="text-xs text-gray-400 mb-4">Proyecta este código en la TV o imprímelo</p>
+            <div class="bg-white p-4 rounded-2xl inline-block shadow-inner mb-4">
+                <img id="qr-image" src="" alt="Código QR" class="w-56 h-56 object-contain">
+            </div>
+            <p id="qr-url-text" class="text-xs text-gold-400 font-mono break-all bg-black/50 p-2.5 rounded-xl border border-gray-800 select-all"></p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 bg-gray-900/95 border border-gold-500/40 text-white px-5 py-3 rounded-full shadow-2xl z-[100] flex items-center gap-3 w-max max-w-[90vw] backdrop-blur-md">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-gold-500"></i>
+        <span id="toast-msg" class="text-xs font-semibold">Mensaje</span>
+    </div>
+
+    <!-- LÓGICA DE TIEMPO REAL NATIVA (SIN FIREBASE) -->
+    <script>
+        // Identificador persistente único de dispositivo para evitar doble voto
+        let deviceId = localStorage.getItem('yo_soy_device_id');
+        if (!deviceId) {
+            deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('yo_soy_device_id', deviceId);
+        }
+
+        let userName = localStorage.getItem('yo_soy_user_name') || '';
+        let adminToken = localStorage.getItem('yo_soy_admin_token') || null;
+        let isAdmin = Boolean(adminToken);
+
+        let participantsData = [];
+        let myVotes = {}; // { participantId: puntos }
+        let currentConfig = {
+            titulo: 'Yo Soy',
+            subtitulo: 'Edición VIP',
+            mostrar_resultados: false,
+            votaciones_abiertas: true
+        };
+
+        let eventSource = null;
+
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        async function initApp() {
+            try {
+                const headers = { 'x-device-id': deviceId };
+                if (adminToken) headers['x-admin-token'] = adminToken;
+
+                const res = await fetch('/api/init', { headers });
+                if (!res.ok) throw new Error('Error al conectar con el servidor');
+                const data = await res.json();
+
+                currentConfig = data.config;
+                participantsData = data.participantes || [];
+                myVotes = data.mis_votos || {};
+                isAdmin = data.isAdmin || Boolean(adminToken);
+
+                // Conectar al canal de tiempo real (Server-Sent Events)
+                connectRealtimeEvents();
+
+                // Actualizar UI
+                updateVotingStatusBadge();
+                renderParticipants();
+                renderRanking();
+
+                if (isAdmin) {
+                    enableAdminUI();
+                    loadAdminRanking();
+                }
+
+                if (userName) {
+                    document.getElementById('display-username').innerText = userName;
+                    document.getElementById('screen-loading').classList.add('hidden');
+                    document.getElementById('screen-app').classList.remove('hidden');
+                } else {
+                    setTimeout(() => {
+                        document.getElementById('screen-loading').classList.add('opacity-0');
+                        setTimeout(() => {
+                            document.getElementById('screen-loading').classList.add('hidden');
+                            document.getElementById('screen-login').classList.remove('hidden');
+                        }, 400);
+                    }, 500);
+                }
+
+            } catch (err) {
+                console.error("Error inicializando:", err);
+                showToast("Conectando en modo local...", "info");
+                document.getElementById('screen-loading').classList.add('hidden');
+                document.getElementById('screen-login').classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // CANAL EN TIEMPO REAL (SSE)
+        // ==========================================
+        function connectRealtimeEvents() {
+            if (eventSource) eventSource.close();
+
+            const url = `/api/events?deviceId=${encodeURIComponent(deviceId)}${isAdmin ? '&admin=1' : ''}`;
+            eventSource = new EventSource(url);
+
+            eventSource.addEventListener('nuevo_voto', (e) => {
+                const data = JSON.parse(e.data);
+                if (data.mostrar_resultados && data.total_puntos !== null) {
+                    const p = participantsData.find(item => item.id === data.participante_id);
+                    if (p) {
+                        p.total_puntos = data.total_puntos;
+                        p.total_votos = data.total_votos;
+                        renderRanking();
+                    }
+                }
+            });
+
+            eventSource.addEventListener('participante_agregado', (e) => {
+                const newP = JSON.parse(e.data);
+                if (!participantsData.some(p => p.id === newP.id)) {
+                    participantsData.push(newP);
+                    renderParticipants();
+                    renderRanking();
+                    if (isAdmin) renderAdminList();
+                    showToast(`¡${newP.nombre_participante} subió al escenario!`);
+                }
+            });
+
+            eventSource.addEventListener('participante_eliminado', (e) => {
+                const { id } = JSON.parse(e.data);
+                participantsData = participantsData.filter(p => p.id !== id);
+                renderParticipants();
+                renderRanking();
+                if (isAdmin) renderAdminList();
+            });
+
+            eventSource.addEventListener('estado_resultados', (e) => {
+                const { mostrar_resultados, participantes } = JSON.parse(e.data);
+                currentConfig.mostrar_resultados = mostrar_resultados;
+                if (participantes) participantsData = participantes;
+                
+                renderRanking();
+
+                if (mostrar_resultados) {
+                    showToast("¡EL ANFITRIÓN HA REVELADO LOS RESULTADOS!");
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                }
+            });
+
+            eventSource.addEventListener('estado_votaciones', (e) => {
+                const { votaciones_abiertas } = JSON.parse(e.data);
+                currentConfig.votaciones_abiertas = votaciones_abiertas;
+                updateVotingStatusBadge();
+                renderParticipants();
+                showToast(votaciones_abiertas ? "Votaciones ABIERTAS" : "Votaciones PAUSADAS");
+            });
+
+            eventSource.addEventListener('votacion_reiniciada', (e) => {
+                const data = JSON.parse(e.data);
+                myVotes = {};
+                if (data.participantes) participantsData = data.participantes;
+                renderParticipants();
+                renderRanking();
+                if (isAdmin) loadAdminRanking();
+                showToast("El anfitrión reinició las votaciones");
+            });
+
+            eventSource.addEventListener('admin_ranking_update', (e) => {
+                if (isAdmin) {
+                    const adminData = JSON.parse(e.data);
+                    renderAdminLiveRanking(adminData);
+                }
+            });
+
+            eventSource.onerror = () => {
+                // Reconexión automática nativa del navegador
+            };
+        }
+
+        // ==========================================
+        // LOGIN & ADMINISTRADOR
+        // ==========================================
+        async function doLogin() {
+            const input = document.getElementById('username-input').value.trim();
+            if (!input) {
+                showToast("Por favor ingresa tu nombre", "warning");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: input })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error de acceso');
+
+                userName = data.username;
+                localStorage.setItem('yo_soy_user_name', userName);
+
+                if (data.isAdmin) {
+                    adminToken = data.adminToken;
+                    localStorage.setItem('yo_soy_admin_token', adminToken);
+                    isAdmin = true;
+                    enableAdminUI();
+                    loadAdminRanking();
+                    connectRealtimeEvents();
+                    showToast("Modo Administrador activado");
+                }
+
+                document.getElementById('display-username').innerText = userName;
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-app').classList.remove('hidden');
+
+                switchTab(isAdmin ? 'admin' : 'votar');
+
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        function promptAdminLogin() {
+            const pin = prompt("Ingresa la clave de administrador:");
+            if (!pin) return;
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin: pin })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.isAdmin) {
+                    adminToken = data.adminToken;
+                    localStorage.setItem('yo_soy_admin_token', adminToken);
+                    localStorage.setItem('yo_soy_user_name', 'Control Maestro');
+                    userName = 'Control Maestro';
+                    isAdmin = true;
+                    
+                    enableAdminUI();
+                    loadAdminRanking();
+                    connectRealtimeEvents();
+
+                    document.getElementById('display-username').innerText = userName;
+                    document.getElementById('screen-login').classList.add('hidden');
+                    document.getElementById('screen-app').classList.remove('hidden');
+                    switchTab('admin');
+                    showToast("Bienvenido al Panel de Control");
+                } else {
+                    showToast("Clave incorrecta", "error");
+                }
+            })
+            .catch(() => showToast("Error al verificar clave", "error"));
+        }
+
+        function enableAdminUI() {
+            const navAdmin = document.getElementById('nav-admin');
+            navAdmin.classList.remove('hidden');
+            navAdmin.classList.add('flex');
+            
+            const badgeJurado = document.getElementById('badge-jurado');
+            badgeJurado.className = "bg-red-600 text-white text-[11px] font-black px-3.5 py-1.5 rounded-full shadow-[0_0_12px_rgba(220,38,38,0.4)] flex items-center gap-1.5";
+            badgeJurado.innerHTML = `<i class="fa-solid fa-user-secret text-[10px]"></i><span>ADMIN</span>`;
+            
+            renderAdminList();
+        }
+
+        function logout() {
+            if (confirm("¿Deseas salir o cambiar de usuario?")) {
+                localStorage.removeItem('yo_soy_user_name');
+                localStorage.removeItem('yo_soy_admin_token');
+                window.location.reload();
+            }
+        }
+
+        // ==========================================
+        // SISTEMA DE VOTACIÓN (PÚBLICO)
+        // ==========================================
+        async function castVote(participantId, stars) {
+            // Verificar si ya votó por este participante
+            if (myVotes[participantId] !== undefined) {
+                showToast("Ya votaste por este participante", "warning");
+                return;
+            }
+
+            if (!currentConfig.votaciones_abiertas) {
+                showToast("Las votaciones están pausadas", "warning");
+                return;
+            }
+
+            // Actualización optimista inmediata
+            myVotes[participantId] = stars;
+            renderParticipants();
+
+            try {
+                const res = await fetch('/api/votar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        participante_id: participantId,
+                        puntos: stars,
+                        votante_nombre: userName,
+                        dispositivo_id: deviceId
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al emitir voto');
+
+                showToast(`¡Voto de ${stars} ⭐ registrado!`, "success");
+                confetti({ particleCount: 30, spread: 60, origin: { y: 0.8 } });
+
+            } catch (err) {
+                delete myVotes[participantId];
+                renderParticipants();
+                showToast(err.message, "error");
+            }
+        }
+
+        function renderParticipants() {
+            const container = document.getElementById('participants-list');
+            if (!container) return;
+
+            const votedCount = Object.keys(myVotes).length;
+            document.getElementById('voted-counter-badge').innerText = `${votedCount} Votados`;
+
+            if (participantsData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-gray-500 bg-gray-900/40 rounded-3xl border border-gray-800">
+                        <i class="fa-solid fa-ghost text-4xl mb-3 text-gray-600"></i>
+                        <h4 class="text-white font-bold text-base">Escenario Vacío</h4>
+                        <p class="text-xs text-gray-400 mt-1">El anfitrión está preparando a los participantes.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+
+            participantsData.forEach((p, idx) => {
+                const hasVoted = myVotes[p.id] !== undefined;
+                const score = myVotes[p.id] || 0;
+                const isVotingClosed = !currentConfig.votaciones_abiertas;
+
+                let starsHTML = '';
+                for (let i = 1; i <= 5; i++) {
+                    const isActive = i <= score;
+                    const starClass = isActive ? 'active text-gold-500' : 'text-gray-700';
+                    const disabledAttr = (hasVoted || isVotingClosed) ? 'disabled' : '';
+                    const clickAction = (hasVoted || isVotingClosed) ? '' : `onclick="castVote('${p.id}', ${i})"`;
+
+                    starsHTML += `
+                        <button type="button" ${clickAction} ${disabledAttr} title="${i} estrellas"
+                                class="star-btn p-2 text-3xl ${starClass} ${hasVoted ? 'cursor-default' : 'hover:scale-125 cursor-pointer'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+                    `;
+                }
+
+                const card = `
+                    <div class="bg-card border ${hasVoted ? 'border-gold-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 'border-gray-800'} p-5 rounded-3xl relative overflow-hidden transition-all">
+                        ${hasVoted ? `
+                            <div class="absolute top-0 right-0 bg-gradient-to-l from-gold-500 to-gold-600 text-black text-[10px] font-black px-3.5 py-1 rounded-bl-xl z-10 flex items-center gap-1">
+                                <i class="fa-solid fa-check"></i> VOTASTE ${score} ⭐
+                            </div>
+                        ` : ''}
+
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-500/20 to-amber-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 font-black text-lg">
+                                    ${idx + 1}
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-black text-white leading-tight">${p.nombre_participante}</h4>
+                                    <p class="text-xs text-gold-400 font-bold mt-0.5 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-music text-[10px]"></i>
+                                        <span>${p.personaje_imita}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estrellas de Calificación -->
+                        <div class="bg-black/60 p-3.5 rounded-2xl border border-gray-800/80 flex flex-col items-center justify-center">
+                            <div class="flex items-center justify-center gap-1">
+                                ${starsHTML}
+                            </div>
+                            <span class="text-[11px] text-gray-500 mt-1 font-medium">
+                                ${hasVoted ? 'Tu calificación fue guardada' : (isVotingClosed ? 'Votación pausada temporalmente' : 'Toca una estrella para calificar')}
+                            </span>
+                        </div>
+
+                        <!-- Súper Voto VIP Opcional WhatsApp -->
+                        <button onclick="openSuperVote('${p.nombre_participante}')" class="mt-3.5 w-full bg-gradient-to-r from-purple-900/60 to-blue-900/60 hover:from-purple-800 hover:to-blue-800 border border-purple-500/30 text-white font-bold py-2.5 rounded-xl text-xs flex justify-center items-center gap-2 active:scale-95 transition">
+                            <i class="fa-solid fa-gem text-purple-300"></i> SÚPER VOTO VIP (S/ 5)
+                        </button>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function openSuperVote(name) {
+            const msg = `¡Hola! Quiero comprar un 💎 Súper Voto VIP para apoyar a *${name}* en Yo Soy. Pásame el Yape/Plin por favor.`;
+            const numero = "51940565471";
+            window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        // ==========================================
+        // PESTAÑA RESULTADOS (SUSPENSO & PODIO)
+        // ==========================================
+        function renderRanking() {
+            const vault = document.getElementById('results-vault');
+            const ranking = document.getElementById('results-ranking');
+            if (!vault || !ranking) return;
+
+            const isRevealed = currentConfig.mostrar_resultados || isAdmin;
+
+            if (!isRevealed) {
+                vault.classList.remove('hidden');
+                ranking.classList.add('hidden');
+                return;
+            }
+
+            vault.classList.add('hidden');
+            ranking.classList.remove('hidden');
+            ranking.innerHTML = '';
+
+            const sorted = [...participantsData].sort((a, b) => (b.total_puntos || 0) - (a.total_puntos || 0));
+
+            sorted.forEach((p, index) => {
+                let badge = `<span class="text-gray-500 font-bold text-base w-7 text-center">${index + 1}º</span>`;
+                let borderGlow = 'border-gray-800';
+
+                if (index === 0) {
+                    badge = `<div class="w-8 h-8 rounded-full bg-gold-500/20 text-gold-400 flex items-center justify-center font-black text-lg border border-gold-500/40"><i class="fa-solid fa-trophy text-sm"></i></div>`;
+                    borderGlow = 'gold-border-glow bg-gradient-to-r from-yellow-950/30 to-black';
+                } else if (index === 1) {
+                    badge = `<div class="w-8 h-8 rounded-full bg-gray-400/20 text-gray-300 flex items-center justify-center font-black text-sm border border-gray-400/40">2º</div>`;
+                } else if (index === 2) {
+                    badge = `<div class="w-8 h-8 rounded-full bg-amber-700/20 text-amber-500 flex items-center justify-center font-black text-sm border border-amber-600/40">3º</div>`;
+                }
+
+                const row = `
+                    <div class="flex items-center justify-between bg-card border ${borderGlow} p-4 rounded-2xl transition">
+                        <div class="flex items-center gap-3.5">
+                            ${badge}
+                            <div>
+                                <h4 class="text-white font-black text-base leading-tight">${p.nombre_participante}</h4>
+                                <p class="text-xs text-gold-400 font-semibold">${p.personaje_imita}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-gold-400 font-black text-xl leading-none">
+                                ${p.total_puntos || 0} <span class="text-[10px] text-gray-500">pts</span>
+                            </span>
+                            <span class="block text-[11px] text-gray-500 mt-1">${p.total_votos || 0} votos</span>
+                        </div>
+                    </div>
+                `;
+                ranking.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // ==========================================
+        // MÉTODOS DE ADMINISTRADOR
+        // ==========================================
+        async function loadAdminRanking() {
+            if (!isAdmin || !adminToken) return;
+            try {
+                const res = await fetch('/api/admin/ranking', {
+                    headers: { 'x-admin-token': adminToken }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                renderAdminLiveRanking(data);
+                updateAdminButtons(data);
+            } catch (e) {
+                console.error("Error cargando ranking admin:", e);
+            }
+        }
+
+        function renderAdminLiveRanking(data) {
+            const container = document.getElementById('admin-ranking-live');
+            if (!container) return;
+
+            document.getElementById('admin-total-votos').innerText = `${data.total_votos || 0} Votos Totales`;
+
+            if (!data.ranking || data.ranking.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 py-3 text-center">Sin participantes aún.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            const maxPts = Math.max(...data.ranking.map(p => p.total_puntos || 0), 1);
+
+            data.ranking.forEach((p, idx) => {
+                const percent = Math.round(((p.total_puntos || 0) / maxPts) * 100);
+                const item = `
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-white flex items-center gap-1.5">
+                                <span class="text-gold-500">${idx + 1}.</span> ${p.nombre_participante} (${p.personaje_imita})
+                            </span>
+                            <span class="text-gold-400 font-mono font-bold">${p.total_puntos} pts (${p.total_votos} v)</span>
+                        </div>
+                        <div class="w-full h-2 bg-black rounded-full overflow-hidden border border-gray-800">
+                            <div class="h-full bg-gradient-to-r from-gold-500 to-amber-600 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', item);
+            });
+        }
+
+        function renderAdminList() {
+            const container = document.getElementById('admin-list');
+            if (!container) return;
+
+            document.getElementById('admin-part-count').innerText = participantsData.length;
+
+            if (participantsData.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 py-3 text-center">No hay participantes registrados.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            participantsData.forEach(p => {
+                const row = `
+                    <div class="flex justify-between items-center bg-black/60 p-3 rounded-xl border border-gray-800">
+                        <div>
+                            <span class="text-white font-bold text-sm block">${p.nombre_participante}</span>
+                            <span class="text-xs text-gray-500">${p.personaje_imita}</span>
+                        </div>
+                        <button onclick="adminDeleteParticipant('${p.id}')" title="Eliminar participante" class="text-red-500 hover:text-red-400 p-2 hover:bg-red-950/50 rounded-lg transition">
+                            <i class="fa-solid fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function updateAdminButtons(config) {
+            const btnReveal = document.getElementById('btn-reveal');
+            const txtReveal = document.getElementById('btn-reveal-text');
+            if (config.mostrar_resultados) {
+                btnReveal.className = "bg-gray-800 hover:bg-gray-700 text-white font-black py-3.5 px-3 rounded-2xl border border-gray-700 transition active:scale-95 text-xs flex items-center justify-center gap-2";
+                txtReveal.innerText = "OCULTAR RESULTADOS";
+                btnReveal.querySelector('i').className = "fa-solid fa-lock";
+            } else {
+                btnReveal.className = "bg-red-600 hover:bg-red-500 text-white font-black py-3.5 px-3 rounded-2xl shadow-lg transition active:scale-95 text-xs flex items-center justify-center gap-2";
+                txtReveal.innerText = "REVELAR RESULTADOS";
+                btnReveal.querySelector('i').className = "fa-solid fa-unlock-keyhole";
+            }
+
+            const btnVoting = document.getElementById('btn-toggle-voting');
+            const txtVoting = document.getElementById('btn-toggle-voting-text');
+            if (config.votaciones_abiertas) {
+                txtVoting.innerText = "PAUSAR VOTACIÓN";
+                btnVoting.querySelector('i').className = "fa-solid fa-pause";
+            } else {
+                txtVoting.innerText = "ABRIR VOTACIÓN";
+                btnVoting.querySelector('i').className = "fa-solid fa-play text-green-400";
+            }
+        }
+
+        async function adminAddParticipant() {
+            const nameInput = document.getElementById('admin-part-name');
+            const artistInput = document.getElementById('admin-part-artist');
+            const name = nameInput.value.trim();
+            const artist = artistInput.value.trim();
+
+            if (!name || !artist) {
+                showToast("Ingresa nombre y personaje", "warning");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/participante', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-token': adminToken
+                    },
+                    body: JSON.stringify({ nombre: name, personaje: artist })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                nameInput.value = '';
+                artistInput.value = '';
+                showToast(`¡${name} agregado con éxito!`, "success");
+
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function adminDeleteParticipant(id) {
+            if (!confirm("¿Seguro que deseas eliminar este participante y sus votos?")) return;
+
+            try {
+                const res = await fetch(`/api/admin/participante/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-token': adminToken }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showToast("Participante eliminado", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function adminToggleReveal() {
+            try {
+                const res = await fetch('/api/admin/mostrar-resultados', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-token': adminToken
+                    },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showToast(data.mostrar_resultados ? "¡Resultados REVELADOS al público!" : "Resultados OCULTOS", "success");
+                loadAdminRanking();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function adminToggleVoting() {
+            try {
+                const res = await fetch('/api/admin/estado-votaciones', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-token': adminToken
+                    },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showToast(data.votaciones_abiertas ? "Votación ABIERTA" : "Votación PAUSADA", "success");
+                loadAdminRanking();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function adminResetVotes() {
+            if (!confirm("⚠️ ¿Estás seguro de REINICIAR todos los votos a 0? Esta acción no se puede deshacer.")) return;
+
+            try {
+                const res = await fetch('/api/admin/reiniciar', {
+                    method: 'POST',
+                    headers: { 'x-admin-token': adminToken }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showToast("Todos los votos fueron reiniciados", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        // ==========================================
+        // CÓDIGO QR MODAL
+        // ==========================================
+        async function openQrModal() {
+            try {
+                const res = await fetch('/api/qr');
+                const data = await res.json();
+                document.getElementById('qr-image').src = data.qr;
+                document.getElementById('qr-url-text').innerText = data.url;
+                document.getElementById('qr-modal').classList.remove('hidden');
+            } catch (e) {
+                showToast("Error cargando código QR", "error");
+            }
+        }
+
+        function closeQrModal() {
+            document.getElementById('qr-modal').classList.add('hidden');
+        }
+
+        // ==========================================
+        // UI HELPERS
+        // ==========================================
+        function updateVotingStatusBadge() {
+            const badge = document.getElementById('voting-status-badge');
+            if (currentConfig.votaciones_abiertas) {
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+            }
+        }
+
+        function switchTab(tabName) {
+            document.getElementById('tab-votar').classList.add('hidden');
+            document.getElementById('tab-resultados').classList.add('hidden');
+            document.getElementById('tab-admin').classList.add('hidden');
+
+            document.getElementById('nav-votar').className = "flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors w-1/3";
+            document.getElementById('nav-resultados').className = "flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors w-1/3";
+            if (isAdmin) document.getElementById('nav-admin').className = "flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors w-1/3";
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            const color = tabName === 'admin' ? 'text-red-500' : 'text-gold-500';
+            document.getElementById(`nav-${tabName}`).className = `flex flex-col items-center gap-1 ${color} transition-colors w-1/3`;
+
+            if (tabName === 'resultados') renderRanking();
+            if (tabName === 'admin') loadAdminRanking();
+        }
+
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = message;
+            
+            if (type === "error") {
+                toastIcon.className = "fa-solid fa-triangle-exclamation text-red-500";
+            } else if (type === "warning") {
+                toastIcon.className = "fa-solid fa-circle-exclamation text-amber-500";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-gold-500";
+            }
+
+            toast.classList.add('show');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: app-votacion-vip
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_PIN
+        value: ADMIN2026
